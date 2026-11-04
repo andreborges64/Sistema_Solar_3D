@@ -1,188 +1,466 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Sistema Solar 3D</title>
-  <link rel="stylesheet" href="style.css">
-  <!-- Inclusão do prefixfree.min.js para adicionar prefixos automaticamente em CSS -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/prefixfree/1.0.7/prefixfree.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#060b17">
+  <meta name="description" content="Explore um Sistema Solar animado em perspectiva, com os oito planetas, a Lua e dados astronômicos.">
+  <title>Atlas Celeste | Sistema Solar Interativo</title>
+  <style>
+    :root { color-scheme:dark; --bg:#050a15; --panel:#0e172a; --ink:#eef6ff; --muted:#98a8bf; --faint:#64758c; --accent:#86e5fb; --line:rgba(154,185,220,.15); --round:18px; }
+    * { box-sizing:border-box; }
+    html,body { width:100%; height:100%; margin:0; overflow:hidden; overscroll-behavior:none; }
+    body { background:var(--bg); color:var(--ink); font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; -webkit-font-smoothing:antialiased; }
+    button { color:inherit; font:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    button:focus-visible, a:focus-visible,canvas:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+    .app { display:grid; grid-template-rows:auto minmax(0,1fr) auto; height:100vh; height:100dvh; width:100%; overflow:hidden; background: radial-gradient(ellipse at 50% 54%,#10203c 0,#080f20 36%,#040814 78%); }
+    .topbar { position:relative; z-index:10; display:flex; justify-content:space-between; align-items:center; gap:14px; padding:14px clamp(15px,2.5vw,36px) 13px; border-bottom:1px solid var(--line); background:linear-gradient(90deg,rgba(7,15,29,.96),rgba(10,19,34,.91)); min-width:0; }
+    .brand { display:flex; align-items:center; gap:12px; min-width:0; }
+    .mark { width:42px;height:42px;border:1px solid #314a63; border-radius:13px; display:grid;place-items:center; flex:none; background:linear-gradient(135deg,#153149,#091426); box-shadow:inset 0 1px rgba(255,255,255,.09); position:relative; }
+    .mark:before { content:""; width:19px;height:19px;border:2px solid #f7bd71; background:radial-gradient(circle at 36% 30%,#ffe5a1,#eb8b43 70%,#9c4b27); border-radius:50%; box-shadow:0 0 13px #f6a65075; }
+    .mark:after { content:""; position:absolute;width:31px;height:10px;border:1.5px solid #95d5f5; border-radius:50%; transform:rotate(-22deg); }
+    .eyebrow { color:var(--accent); text-transform:uppercase; letter-spacing:.19em; font-weight:800; font-size:9px; line-height:1.4; }
+    h1 { margin:1px 0 0; font-size:clamp(18px,1.85vw,27px); font-weight:740; line-height:1.16; letter-spacing:-.04em; white-space:nowrap; }
+    .controls { display:flex; flex-wrap:wrap; justify-content:flex-end; align-items:center; gap:8px; }
+    .switch { display:flex; padding:3px; border:1px solid #294158; background:#091424; border-radius:12px; gap:3px; }
+    .switch button { border:0; padding:9px 13px; border-radius:8px; background:transparent; color:#9aabc0; font-size:12px;font-weight:670; transition:background .2s,color .2s; white-space:nowrap; }
+    .switch button.active { background:#213c55; color:#eafaff; box-shadow:inset 0 1px rgba(255,255,255,.07); }
+    .action { height:36px; padding:0 12px;border:1px solid #294158; border-radius:11px; background:#101d30; color:#c1d8eb; font-weight:750;font-size:12px; display:inline-flex;justify-content:center;align-items:center;gap:7px; white-space:nowrap; }
+    .action:hover,.switch button:hover { border-color:#5680a2; color:white; }
+    .action svg { display:block; width:14px;height:14px; }
+    .action.square { width:36px;padding:0; }
+    .app-main { position:relative; overflow:hidden; min-height:0; isolation:isolate; }
+    .app-main:after { pointer-events:none; content:""; position:absolute;inset:0; background:linear-gradient(180deg,rgba(2,6,16,.15),transparent 24%,transparent 74%,rgba(1,5,15,.24)); z-index:1; }
+    #universe { width:100%;height:100%;display:block; touch-action:none; cursor:grab; position:absolute;inset:0; }
+    #universe.dragging { cursor:grabbing; }
+    .hud { position:absolute; z-index:2; pointer-events:none; }
+    .hud-top { left:clamp(17px,3vw,42px); top:clamp(16px,3vw,35px); }
+    .micro { display:inline-flex;align-items:center;gap:8px;color:#7fa4bd; font-weight:750; font-size:10px; letter-spacing:.15em;text-transform:uppercase; }
+    .pulse { width:6px;height:6px;border-radius:50%;background:#72efd4; box-shadow:0 0 12px #5ff7d7; }
+    .hud-heading { font-size:clamp(16px,2vw,27px);font-weight:650;letter-spacing:-.04em;line-height:1.15;margin:8px 0 5px; }
+    .hud-copy { font-size:clamp(10px,1vw,12px);color:#8299b0;max-width:240px;line-height:1.5;margin:0; }
+    .hud-right { right:clamp(17px,3vw,42px);top:clamp(16px,3vw,35px); text-align:right; }
+    .counter { font-size:clamp(18px,2.5vw,30px);font-weight:760;letter-spacing:-.06em; }
+    .counter small { font-size:11px;color:#7291a8; font-weight:650;letter-spacing:.07em;margin-left:5px; }
+    .hint {position:absolute;z-index:2;left:50%;bottom:clamp(15px,3vh,32px); transform:translateX(-50%); pointer-events:none; border:1px solid rgba(106,150,187,.16);background:rgba(10,19,33,.72);backdrop-filter:blur(10px);border-radius:999px;color:#a0b6ca;font-size:11px;padding:10px 15px;text-align:center;max-width:calc(100% - 32px);white-space:nowrap;}
+    .footer { position:relative;z-index:10;min-height:42px;padding:10px clamp(15px,2.5vw,36px);display:flex;align-items:center;justify-content:space-between;gap:14px;border-top:1px solid var(--line);background:#08111f;color:#8298ac;font-size:10px;letter-spacing:.012em; }
+    .footer strong { color:#bcd2e4;font-weight:600; }
+    .footer a { color:#9ac9de;text-decoration:none; }
+    .footer a:hover {text-decoration:underline;}
+    .footer .source { text-align:right; }
+    .focus {position:absolute;inset:0;z-index:5;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);background:linear-gradient(115deg,#060d1c,#0b172a);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .27s ease,visibility .27s;}
+    .focus.open {opacity:1;visibility:visible;pointer-events:auto;}
+    .focus-visual {min-width:0;min-height:0;position:relative;overflow:hidden;background:radial-gradient(ellipse at 49% 48%,#172d48 0%,#091527 36%,#060d1b 69%); border-right:1px solid rgba(132,175,210,.15);cursor:pointer;}
+    #focusCanvas {display:block;width:100%;height:100%;}
+    .focus-kicker {position:absolute;bottom:clamp(15px,4vh,33px);left:0;right:0;text-align:center;letter-spacing:.18em;text-transform:uppercase;font-size:10px;font-weight:700;color:#83a4bb;pointer-events:none;}
+    .back {position:absolute;top:clamp(14px,2vw,29px);left:clamp(13px,2vw,29px);border:1px solid #34516c;background:rgba(13,29,46,.92);padding:9px 13px;border-radius:10px;font-size:12px;color:#d5ebf9;font-weight:700;backdrop-filter:blur(8px);}
+    .back:hover {background:#254158;}
+    .focus-panel {min-width:0;min-height:0;display:flex; flex-direction:column; justify-content:center;gap:clamp(9px,1.4vh,20px);padding:clamp(19px,3vw,45px);overflow:hidden;cursor:pointer;background:linear-gradient(155deg,rgba(17,34,57,.83),rgba(8,16,31,.93));}
+    .focus-type {text-transform:uppercase;color:#8ee0f2;font-size:10px;letter-spacing:.18em;font-weight:780;}
+    .focus-name {font-size:clamp(30px,4.5vw,70px);line-height:1;letter-spacing:-.075em;font-weight:790;margin:7px 0 0;}
+    .focus-summary {font-size:clamp(11px,1.08vw,14px);line-height:1.45;color:#9db0c5;max-width:460px;margin:9px 0 0;}
+    .facts {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:clamp(12px,2.5vw,29px);row-gap:0;min-height:0;}
+    .fact {padding:clamp(9px,1.4vh,17px) 0;border-top:1px solid rgba(145,186,217,.16);min-width:0;}
+    .fact-label {color:#839bb4;font-weight:700;text-transform:uppercase;letter-spacing:.11em;font-size:clamp(8px,.75vw,10px);display:block;margin-bottom:5px;}
+    .fact-value {font-size:clamp(12px,1.17vw,17px);font-weight:720;letter-spacing:-.025em;color:#f0f8ff;line-height:1.25;display:block;overflow-wrap:anywhere;}
+    .focus-foot {font-size:10px;color:#7890a7;line-height:1.5;border-top:1px solid var(--line);padding-top:11px;}
+    .focus-foot span {color:#b5d0e4;}
+    @media(max-width:800px) {
+      .topbar { padding:11px 14px;gap:8px; }
+      .mark { width:36px;height:36px; border-radius:11px; }
+      .brand { gap:9px; }
+      h1 {font-size:19px;}
+      .controls {gap:5px;}
+      .switch button {padding:8px 9px;font-size:11px;}
+      .action {height:33px;padding:0 9px;font-size:11px;}
+      .action.square {width:33px;}
+      .focus {grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);}
+      .focus-panel {padding:clamp(12px,2vw,20px);}
+      .facts {grid-template-columns:repeat(2,minmax(0,1fr));column-gap:10px;}
+      .focus-name {font-size:clamp(25px,4.3vw,42px);}
+      .focus-summary {font-size:11px;}
+    }
+    @media(max-width:560px) {
+      .topbar {flex-wrap:wrap;gap:9px;}
+      .brand {width:100%;}
+      .brand .eyebrow {font-size:8px;}
+      .controls {justify-content:space-between;width:100%;}
+      .switch { flex:1; }
+      .switch button {flex:1;padding:7px 6px;}
+      .hud-heading {font-size:17px;}
+      .hud-top {top:14px;left:13px;}
+      .hud-right {top:14px;right:13px;}
+      .hud-copy {max-width:150px;}
+      .counter {font-size:21px;}
+      .counter small {display:block;margin:0;}
+      .hint {font-size:10px;padding:9px 12px;}
+      .footer {font-size:9px;padding:9px 13px;gap:6px;min-height:35px;}
+      .footer .footer-info {max-width:58%;}
+      .footer .source {max-width:42%;}
+      .focus {grid-template-columns:minmax(0,.93fr) minmax(0,1.07fr);}
+      .focus-panel {padding:10px 9px;gap:9px;}
+      .focus-name {font-size:clamp(25px,7vw,37px);}
+      .focus-type {font-size:8px;letter-spacing:.12em;}
+      .focus-summary {font-size:10px;line-height:1.36;margin-top:6px;}
+      .facts {grid-template-columns:minmax(0,1fr);}
+      .fact {padding:6px 0;}
+      .fact-label {font-size:8px;margin-bottom:2px;}
+      .fact-value {font-size:clamp(11px,2.9vw,14px);}
+      .focus-foot {font-size:9px;padding-top:8px;}
+      .back {top:11px;left:9px;font-size:10px;padding:8px;}
+      .focus-kicker {font-size:8px;letter-spacing:.08em;bottom:15px;}
+    }
+    @media(max-height:660px) {
+      .focus-panel {gap:6px;}
+      .focus-summary {margin-top:5px;}
+      .fact {padding:6px 0;}
+      .focus-foot {padding-top:5px;}
+    }
+    @media(max-height:530px) {
+      .topbar {padding-top:6px;padding-bottom:6px;}
+      .footer {padding-top:5px;padding-bottom:5px;min-height:24px;}
+      .focus-panel {justify-content:flex-start;gap:6px;}
+      .focus-summary,.focus-foot {display:none;}
+      .fact {padding:4px 0;}
+      .focus-name {font-size:clamp(24px,4vw,42px);margin-top:3px;}
+      .fact-value {font-size:clamp(11px,1.2vw,14px);}
+      .fact-label {font-size:8px;margin-bottom:2px;}
+    }
+    @media(max-width:560px) and (max-height:640px) {
+      .hud-copy {display:none;}
+      .focus-summary {display:none;}
+      .fact {padding:4px 0;}
+      .focus-foot {display:none;}
+    }
+    @media(prefers-reduced-motion:reduce) { .focus {transition:none;} }
+  </style>
 </head>
-<body class="opening hide-UI view-2D zoom-large data-close controls-close">
-  <div id="navbar">
-    <a id="toggle-data" href="#data"><i class="icon-data"></i>Dados</a>
-    <h1>Sistema Solar<br><span>por <a href="https://github.com/andreborges64" target="_blank">@andreborges64</a></span></h1>
-    <a id="toggle-controls" href="#controls"><i class="icon-controls"></i>Controles</a>
-  </div>
-  <!-- Seção de dados dos planetas -->
-  <div id="data">
-    <!-- Links para visualizar as informações dos planetas -->
-    <a class="sun" title="sun" href="#sunspeed">Sol</a>
-    <a class="mercury" title="mercury" href="#mercuryspeed">Mercúrio</a>
-    <a class="venus" title="venus" href="#venusspeed">Vênus</a>
-    <a class="earth active" title="earth" href="#earthspeed">Terra</a>
-    <a class="mars" title="mars" href="#marsspeed">Marte</a>
-    <a class="jupiter" title="jupiter" href="#jupiterspeed">Júpiter</a>
-    <a class="saturn" title="saturn" href="#saturnspeed">Saturno</a>
-    <a class="uranus" title="uranus" href="#uranusspeed">Urano</a>
-    <a class="neptune" title="neptune" href="#neptunespeed">Netuno</a>
-  </div>
-  <!-- Seção de controles do sistema solar -->
-  <div id="controls">
-    <!-- Controles de visualização -->
-    <label class="set-view">
-      <input type="checkbox">
-    </label>
-    <!-- Controle de zoom -->
-    <label class="set-zoom">
-      <input type="checkbox">
-    </label>
-    <!-- Opções de escala: Velocidade, Tamanho, Distância -->
-    <label>
-      <input type="radio" class="set-speed" name="scale" checked>
-      <span>Velocidade</span>
-    </label>
-    <label>
-      <input type="radio" class="set-size" name="scale">
-      <span>Tamanho</span>
-    </label>
-    <label>
-      <input type="radio" class="set-distance" name="scale">
-      <span>Distância</span>
-    </label>
-  </div>
-  <!-- Universo com o sistema solar e suas órbitas -->
-  <div id="universe" class="scale-stretched">
-    <div id="galaxy">
-      <div id="solar-system" class="earth">
-        <!-- Órbita de Mercúrio -->
-        <div id="mercury" class="orbit">
-          <div class="pos">
-            <div class="planet">
-              <!-- Informações de Mercúrio -->
-              <dl class="infos">
-                <dt>Mercúrio</dt>
-                <dd><span></span></dd>
-              </dl>
-            </div>
-          </div>
-        </div>
-        <!-- Órbita de Vênus -->
-        <div id="venus" class="orbit">
-          <div class="pos">
-            <div class="planet">
-              <!-- Informações de Vênus -->
-              <dl class="infos">
-                <dt>Vênus</dt>
-                <dd><span></span></dd>
-              </dl>
-            </div>
-          </div>
-        </div>
-        <!-- Órbita da Terra -->
-        <div id="earth" class="orbit">
-          <div class="pos">
-            <!-- Lua da Terra -->
-            <div class="orbit">
-              <div class="pos">
-                <div class="moon"></div>
-              </div>
-            </div>
-            <div class="planet">
-              <!-- Informações da Terra -->
-              <dl class="infos">
-                <dt>Terra</dt>
-                <dd><span></span></dd>
-              </dl>
-            </div>
-          </div>
-        </div>
-        <!-- Órbita de Marte -->
-        <div id="mars" class="orbit">
-          <div class="pos">
-            <div class="planet">
-              <!-- Informações de Marte -->
-              <dl class="infos">
-                <dt>Marte</dt>
-                <dd><span></span></dd>
-              </dl>
-            </div>
-          </div>
-        </div>
-        <!-- Órbita de Júpiter -->
-        <div id="jupiter" class="orbit">
-          <div class="pos">
-            <div class="planet">
-              <!-- Informações de Júpiter -->
-              <dl class="infos">
-                <dt>Júpiter</dt>
-                <dd><span></span></dd>
-              </dl>
-            </div>
-          </div>
-        </div>
-        <!-- Órbita de Saturno -->
-        <div id="saturn" class="orbit">
-          <div class="pos">
-            <div class="planet">
-              <!-- Anel de Saturno -->
-              <div class="ring"></div>
-              <!-- Informações de Saturno -->
-              <dl class="infos">
-                <dt>Saturno</dt>
-                <dd><span></span></dd>
-              </dl>
-            </div>
-          </div>
-        </div>
-        <!-- Órbita de Urano -->
-        <div id="uranus" class="orbit">
-          <div class="pos">
-            <div class="planet">
-              <!-- Informações de Urano -->
-              <dl class="infos">
-                <dt>Urano</dt>
-                <dd><span></span></dd>
-              </dl>
-            </div>
-          </div>
-        </div>
-        <!-- Órbita de Netuno -->
-        <div id="neptune" class="orbit">
-          <div class="pos">
-            <div class="planet">
-              <!-- Informações de Netuno -->
-              <dl class="infos">
-                <dt>Netuno</dt>
-                <dd><span></span></dd>
-              </dl>
-            </div>
-          </div>
-        </div>
-        <!-- Sol -->
-        <div id="sun">
-          <dl class="infos">
-            <dt>Sol</dt>
-            <dd><span></span></dd>
-          </dl>
-        </div>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><div class="mark" aria-hidden="true"></div><div><div class="eyebrow">Atlas celeste / exploração espacial</div><h1>Sistema Solar <span style="color:#789ab3;font-weight:450">.</span></h1></div></div>
+    <nav class="controls" aria-label="Controles de visualização">
+      <div class="switch" role="group" aria-label="Modo de escala">
+        <button type="button" class="active" id="modeSimple" aria-pressed="true">Didática</button>
+        <button type="button" id="modeScaled" aria-pressed="false">Escalonada 3D</button>
       </div>
-    </div>
-  </div>
+      <button type="button" class="action" id="speedBtn" aria-label="Alterar velocidade" title="Velocidade da simulação">⏱ <span id="speedText">1×</span></button>
+      <button type="button" class="action square" id="pauseBtn" aria-label="Pausar animação" title="Pausar / continuar">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4" width="4" height="16" rx="1.2"/><rect x="14" y="4" width="4" height="16" rx="1.2"/></svg>
+      </button>
+    </nav>
+  </header>
+  <main class="app-main" id="main">
+    <canvas id="universe" tabindex="0" aria-label="Sistema Solar animado. Clique em um planeta, no Sol ou na Lua para explorar; use setas e Enter pelo teclado."></canvas>
+    <div class="hud hud-top" aria-hidden="true"><div class="micro"><i class="pulse"></i> Simulação interativa</div><div class="hud-heading" id="hudTitle">Uma viagem pelo cosmos</div><p class="hud-copy" id="hudCopy">Selecione um astro para conhecer suas dimensões e seus movimentos.</p></div>
+    <div class="hud hud-right" aria-hidden="true"><div class="micro">Nosso sistema</div><div class="counter">08 <small>PLANETAS</small></div><div class="counter" style="font-size:15px;color:#8ba5bf">01 Sol · 01 Lua</div></div>
+    <div class="hint" id="hint">✦ Toque em um astro · Arraste para mudar a perspectiva</div>
+    <section class="focus" id="focus" aria-hidden="true" aria-label="Detalhes do astro selecionado">
+      <div class="focus-visual" id="visualArea">
+        <canvas id="focusCanvas" aria-label="Representação ampliada do astro"></canvas>
+        <button type="button" class="back" id="backBtn">← Voltar ao sistema</button>
+        <div class="focus-kicker" id="focusKicker">Representação ilustrativa · rotação animada</div>
+      </div>
+      <div class="focus-panel" id="focusPanel" title="Clique fora do astro para retornar">
+        <div><div class="focus-type" id="focusType"></div><h2 class="focus-name" id="focusName"></h2><p class="focus-summary" id="focusSummary"></p></div>
+        <div class="facts" id="facts"></div>
+        <div class="focus-foot">Valores médios aproximados · <span>órbita calculada como circunferência</span>.</div>
+      </div>
+    </section>
+  </main>
   <footer>
     <p>&copy; 2025 André Luiz Silva Dias Borges. Todos os direitos reservados.</p>
-</footer>
-  <!-- Inclusão do jQuery com fallback -->
-  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.1/jquery.min.js"></script>
-  <script type="text/javascript">
-    if (typeof jQuery == 'undefined') { 
-      document.write(unescape("%3Cscript src='js/jquery.min.js' type='text/javascript'%3E%3C/script%3E"));
+  </footer>
+</div>
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const canvas=$('universe'),ctx=canvas.getContext('2d',{alpha:false});
+  const detailCanvas=$('focusCanvas'),dc=detailCanvas.getContext('2d',{alpha:true});
+  const modeButtons=[$('modeSimple'),$('modeScaled')];
+  const NASA = 'https://nssdc.gsfc.nasa.gov/planetary/factsheet/';
+  const PLANETS = [
+    {id:'mercurio',name:'Mercúrio',kind:'Planeta rochoso',diam:4879,dist:57.9,days:88.0,rotation:'58,6 dias',temp:'167 °C',gravity:'3,7 m/s²',moons:'0',color:'#b5a99d',light:'#dfd2c0',dark:'#665c57',baseR:4.2,phase:3.8,intro:'O menor planeta. Sua superfície repleta de crateras registra bilhões de anos de impactos.'},
+    {id:'venus',name:'Vênus',kind:'Planeta rochoso',diam:12104,dist:108.2,days:224.7,rotation:'243 dias ↶',temp:'464 °C',gravity:'8,9 m/s²',moons:'0',color:'#e6c18d',light:'#ffe7b4',dark:'#946b4c',baseR:7,phase:1.1,intro:'Envolto por nuvens densas, gira no sentido retrógrado e é o planeta mais quente.'},
+    {id:'terra',name:'Terra',kind:'Planeta rochoso',diam:12756,dist:149.6,days:365.2,rotation:'23 h 56 min',temp:'15 °C',gravity:'9,8 m/s²',moons:'1',color:'#2882c5',light:'#71c4e9',dark:'#0f396e',baseR:7.3,phase:5.3,intro:'Nosso lar: oceanos de água líquida, atmosfera protetora e uma Lua natural.'},
+    {id:'marte',name:'Marte',kind:'Planeta rochoso',diam:6792,dist:228,days:687.0,rotation:'24 h 37 min',temp:'−65 °C',gravity:'3,7 m/s²',moons:'2',color:'#b96342',light:'#efaa78',dark:'#68372b',baseR:5.7,phase:2.8,intro:'O planeta vermelho abriga vulcões gigantes, cânions e antigas marcas de água.'},
+    {id:'jupiter',name:'Júpiter',kind:'Gigante gasoso',diam:142984,dist:778.5,days:4331,rotation:'9 h 56 min',temp:'−110 °C',gravity:'23,1 m/s²',moons:'Muitas',color:'#d6aa85',light:'#f6dec0',dark:'#85563e',baseR:15,phase:.25,intro:'O maior planeta do Sistema Solar, conhecido pelas faixas de nuvens e pela Grande Mancha Vermelha.'},
+    {id:'saturno',name:'Saturno',kind:'Gigante gasoso',diam:120536,dist:1432.0,days:10747,rotation:'10 h 42 min',temp:'−140 °C',gravity:'9,0 m/s²',moons:'Muitas',color:'#d5ba85',light:'#f2dfa9',dark:'#8b764e',baseR:12,phase:4.4,intro:'Um gigante de baixa densidade cercado por anéis de gelo, poeira e fragmentos rochosos.'},
+    {id:'urano',name:'Urano',kind:'Gigante gelado',diam:51118,dist:2867,days:30589,rotation:'17 h 14 min ↶',temp:'−195 °C',gravity:'8,7 m/s²',moons:'Muitas',color:'#8ad8d8',light:'#c8f6e9',dark:'#478b9d',baseR:10.2,phase:2.0,intro:'Seu eixo extremamente inclinado faz parecer que rola ao longo de sua órbita.'},
+    {id:'netuno',name:'Netuno',kind:'Gigante gelado',diam:49528,dist:4515,days:59800,rotation:'16 h 6 min',temp:'−200 °C',gravity:'11,0 m/s²',moons:'Muitas',color:'#4169db',light:'#91adff',dark:'#263c8b',baseR:10.1,phase:5.65,intro:'Distante e azul, apresenta ventos muito intensos em sua atmosfera.'}
+  ];
+  const SUN={id:'sol',name:'Sol',kind:'Estrela · tipo G2V',diam:1392700,dist:0,rotation:'≈ 25 dias (equador)',temp:'≈ 5.500 °C',gravity:'274 m/s²',moons:'—',color:'#ffa83e',light:'#fff0a3',dark:'#df541f',intro:'A estrela que ilumina nosso sistema e concentra quase toda sua massa.'};
+  const MOON={id:'lua',name:'Lua',kind:'Satélite natural da Terra',diam:3475,dist:0.384,days:27.3,rotation:'27,3 dias',temp:'−20 °C',gravity:'1,6 m/s²',moons:'—',color:'#adb7c4',light:'#e4e9ef',dark:'#545f73',intro:'Nossa companheira celeste mantém a mesma face voltada à Terra graças à rotação síncrona.'};
+  const bodies=[SUN,...PLANETS,MOON];
+  let mode='simple',speedIndex=0,paused=false,sim=1.2,frameTime=0,selected=null,hover=null;
+  const speeds=[1,4,12];let w=0,h=0,dw=0,dh=0,dpr=1,detailDpr=1;
+  const view={yaw:-.19,pitch:.64,targetPitch:.64};
+  let pointerStart=null, dragLast=null,worldHits=[],detailCircle={x:0,y:0,r:0};
+  const reduceMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduceMotion) paused=true;
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const randomSeed=(seed)=>()=>{seed=(Math.imul(1664525,seed)+1013904223)|0;return (seed>>>0)/4294967296};
+  const rng=randomSeed(5011);
+  const stars=Array.from({length:260},()=>({x:rng(),y:rng(),r:.25+rng()*.95,alpha:.15+rng()*.6,phase:rng()*6.28}));
+  const asteroids=Array.from({length:280},()=>({a:rng()*Math.PI*2,r:.445+rng()*.053,alpha:.1+rng()*.4,size:.4+rng()*.6}));
+  const cachedSprites=new Map();
+  const ellipse=(c,x,y,rx,ry,rot=0,st=0,en=Math.PI*2)=>{c.beginPath();c.ellipse(x,y,rx,ry,rot,st,en);};
+  function spriteFor(body) {
+    if(cachedSprites.has(body.id))return cachedSprites.get(body.id);
+    const size=512,c=document.createElement('canvas');c.width=c.height=size;const p=c.getContext('2d');
+    const cx=256,cy=256,r=244;
+    p.save();p.beginPath();p.arc(cx,cy,r,0,Math.PI*2);p.clip();
+    const base=p.createLinearGradient(0,40,512,480);base.addColorStop(0,body.light);base.addColorStop(.46,body.color);base.addColorStop(1,body.dark);p.fillStyle=base;p.fillRect(0,0,512,512);
+    const ran=randomSeed(body.id.split('').reduce((a,c)=>a+c.charCodeAt(0),813));
+    if(['jupiter','saturno','venus','urano','netuno'].includes(body.id)){
+      const bands=body.id==='jupiter'?28:body.id==='saturno'?21:15;
+      for(let i=0;i<bands;i++){
+        const y=i*(512/bands)-12,th=512/bands*(.3+ran()*.6);
+        p.beginPath();p.moveTo(-5,y);
+        for(let x=0;x<=540;x+=12)p.lineTo(x,y+Math.sin(x/42+i*1.3)*((body.id==='jupiter')?8:3));
+        p.lineTo(540,y+th);p.lineTo(-5,y+th);p.closePath();
+        p.fillStyle=i%3===0?'rgba(255,246,213,.19)':i%3===1?'rgba(64,57,72,.12)':'rgba(255,244,233,.11)';p.fill();
+      }
+      if(body.id==='jupiter'){
+        p.fillStyle='#b76e57';ellipse(p,362,300,57,27,-.11);p.fill();
+        p.strokeStyle='#eed6bc';p.lineWidth=9;ellipse(p,362,300,62,33,-.11);p.stroke();
+        p.fillStyle='rgba(255,229,198,.26)';ellipse(p,353,293,29,11,-.11);p.fill();
+      }
+      if(body.id==='netuno') {p.fillStyle='rgba(220,240,255,.2)';ellipse(p,350,340,63,23,-.13);p.fill();}
     }
-  </script>
-  <!-- Outros scripts JavaScript -->
-  <script src="js/prefixfree.min.js"></script>
-  <script src="js/scripts.min.js"></script>
-  <!-- Script adicional -->
-  <script src='//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js'></script>
-  <script src="./script.js"></script>
+    if(body.id==='terra') {
+      const shapes=[[[.08,.30],[.24,.24],[.32,.31],[.39,.30],[.45,.37],[.4,.45],[.31,.48],[.26,.61],[.17,.57],[.12,.46]],[[.51,.18],[.62,.19],[.72,.29],[.8,.33],[.72,.41],[.68,.55],[.6,.67],[.53,.58],[.57,.42]],[[.76,.68],[.9,.66],[.93,.79],[.85,.84],[.78,.8]]];
+      shapes.forEach((arr,j)=>{p.beginPath();arr.forEach(([x,y],i)=>i?p.lineTo(x*512,y*512):p.moveTo(x*512,y*512));p.closePath();p.fillStyle=j===1?'#659674':'#6a9867';p.fill();p.strokeStyle='rgba(141,195,134,.4)';p.lineWidth=8;p.stroke();});
+      for(let i=0;i<17;i++){const y=30+ran()*440;p.beginPath();p.ellipse(ran()*500,y,35+ran()*90,4+ran()*9,-.22,0,Math.PI*2);p.fillStyle='rgba(238,252,255,.19)';p.fill();}
+    }
+    if(['mercurio','lua','marte'].includes(body.id)){
+      for(let i=0;i<105;i++){
+        const x=30+ran()*455,y=30+ran()*455,rr=2+ran()*15;
+        p.beginPath();p.arc(x,y,rr,0,Math.PI*2);p.fillStyle=body.id==='marte'?'rgba(85,39,29,.13)':'rgba(27,30,42,.14)';p.fill();
+        p.beginPath();p.arc(x-1,y-1,rr*.79,0,Math.PI*2);p.strokeStyle='rgba(255,238,218,.18)';p.lineWidth=1.4;p.stroke();
+      }
+      if(body.id==='marte') {p.fillStyle='rgba(241,193,149,.39)';p.beginPath();p.ellipse(200,90,140,42,-.22,0,Math.PI*2);p.fill();}
+    }
+    if(body.id==='sol'){
+      // Grânulos e filamentos brilhantes dão à estrela uma textura solar, não planetária.
+      for(let i=0;i<155;i++){
+        const x=ran()*512,y=ran()*512,rr=4+ran()*23;
+        p.beginPath();p.ellipse(x,y,rr,rr*(.4+ran()*.5),ran()*2,0,Math.PI*2);
+        p.fillStyle=i%3===0?'rgba(255,245,164,.22)':i%3===1?'rgba(211,85,17,.12)':'rgba(255,177,69,.18)';p.fill();
+      }
+      for(let i=0;i<95;i++){
+        const y=ran()*512,x=ran()*512;p.beginPath();p.moveTo(x-32,y);
+        p.bezierCurveTo(x,y-19,x+26,y+19,x+57,y-3);
+        p.strokeStyle=i%2?'rgba(255,242,157,.2)':'rgba(209,85,18,.17)';p.lineWidth=2+ran()*7;p.stroke();
+      }
+      const plasma=p.createRadialGradient(169,145,12,265,265,300);
+      plasma.addColorStop(0,'rgba(255,255,206,.78)');plasma.addColorStop(.3,'rgba(255,222,108,.57)');
+      plasma.addColorStop(.66,'rgba(255,174,49,.13)');plasma.addColorStop(1,'rgba(226,73,12,.27)');
+      p.fillStyle=plasma;p.fillRect(0,0,512,512);
+    } else {
+      const shade=p.createRadialGradient(190,150,20,280,270,310);
+      shade.addColorStop(0,'rgba(255,255,255,.25)');shade.addColorStop(.37,'rgba(255,255,255,0)');shade.addColorStop(.72,'rgba(2,8,21,.07)');shade.addColorStop(.99,'rgba(2,6,18,.72)');p.fillStyle=shade;p.fillRect(0,0,512,512);
+      const crescent=p.createLinearGradient(0,0,512,0);crescent.addColorStop(0,'rgba(255,255,255,.12)');crescent.addColorStop(.55,'rgba(0,0,0,0)');crescent.addColorStop(1,'rgba(2,4,13,.50)');p.fillStyle=crescent;p.fillRect(0,0,512,512);
+    }
+    p.restore();cachedSprites.set(body.id,c);return c;
+  }
+  function drawSphere(c,body,x,y,r,t) {
+    if(body.id==='sol'){
+      const gr=c.createRadialGradient(x,y,r*.25,x,y,r*2.9);
+      gr.addColorStop(0,'rgba(255,211,101,.5)');gr.addColorStop(.32,'rgba(255,134,43,.17)');gr.addColorStop(.64,'rgba(255,109,31,.052)');gr.addColorStop(1,'rgba(255,91,20,0)');c.fillStyle=gr;c.beginPath();c.arc(x,y,r*2.9,0,Math.PI*2);c.fill();
+      c.save();c.globalAlpha=.16;c.strokeStyle='#ffa03a';c.lineWidth=Math.max(1,r*.035);
+      for(let k=0;k<11;k++){const a=k*(Math.PI*2/11)+Math.sin(t*.18+k)*.12;const len=r*(1.13+.11*Math.sin(t*.5+k));c.beginPath();c.moveTo(x+Math.cos(a)*r*.94,y+Math.sin(a)*r*.94);c.lineTo(x+Math.cos(a)*len,y+Math.sin(a)*len);c.stroke();}c.restore();
+    }
+    if(body.id==='saturno')drawRings(c,x,y,r,true);
+    c.drawImage(spriteFor(body),x-r,y-r,r*2,r*2);
+    if(body.id==='saturno')drawRings(c,x,y,r,false);
+    if(r>17 && body.id!=='sol'){
+      const gl=c.createRadialGradient(x-r*.36,y-r*.56,0,x,y,r);
+      gl.addColorStop(0,'rgba(255,255,255,.09)');gl.addColorStop(.65,'rgba(255,255,255,0)');gl.addColorStop(1,'rgba(255,255,255,0)');c.fillStyle=gl;c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.fill();
+    }
+    if(body.id==='terra' && r>8){c.strokeStyle='rgba(111,204,255,.24)';c.lineWidth=Math.max(1,r*.065);c.beginPath();c.arc(x,y,r+1,0,Math.PI*2);c.stroke();}
+  }
+  function drawRings(c,x,y,r,behind){
+    c.save();const rot=-.25;
+    for(let n=0;n<6;n++){
+      let band=r*(1.37+n*.113),ry=band*.36;
+      c.strokeStyle=n%2?'rgba(227,211,172,.6)':'rgba(184,175,165,.48)';c.lineWidth=Math.max(.9,r*.037);
+      ellipse(c,x,y,band,ry,rot,behind?Math.PI:0,behind?Math.PI*2:Math.PI);c.stroke();
+    }
+    c.restore();
+  }
+  function resizeCanvas(c,context,which){const b=c.getBoundingClientRect();const d=Math.min(window.devicePixelRatio||1,2);c.width=Math.round(Math.max(1,b.width)*d);c.height=Math.round(Math.max(1,b.height)*d);context.setTransform(d,0,0,d,0,0);if(which==='global'){w=b.width;h=b.height;dpr=d;}else{dw=b.width;dh=b.height;detailDpr=d;}}
+  function resize(){resizeCanvas(canvas,ctx,'global');resizeCanvas(detailCanvas,dc,'detail');}
+  const maxRadius=()=>Math.max(30,Math.min(w*.468,h*.82));
+  const stageCenter=()=>({x:w*.5,y:h*.53});
+  function radialFraction(i){return mode==='simple'?[.154,.233,.313,.395,.535,.667,.805,.951][i]:Math.sqrt(PLANETS[i].dist/4515)*.948;}
+  function projection(a,R,center,tilt){const x=Math.cos(a)*R,z=Math.sin(a)*R,cy=Math.cos(view.yaw),sy=Math.sin(view.yaw);
+    const rx=x*cy-z*sy, rz=x*sy+z*cy;
+    const scale=1+rz/(Math.max(150,R*5.3));
+    return{x:center.x+rx*scale,y:center.y+rz*Math.sin(tilt)*scale,z:rz,depthScale:scale};
+  }
+  function drawBackground(c,W,H,time){c.fillStyle='#060c19';c.fillRect(0,0,W,H);
+    let neb=c.createRadialGradient(W*.5,H*.52,10,W*.5,H*.52,Math.max(W,H)*.55);
+    neb.addColorStop(0,'rgba(28,55,91,.45)');neb.addColorStop(.37,'rgba(14,29,56,.26)');neb.addColorStop(1,'rgba(3,8,20,0)');c.fillStyle=neb;c.fillRect(0,0,W,H);
+    for(const s of stars){const sx=s.x*W,sy=s.y*H;let a=s.alpha*(.82+.18*Math.sin(time*.4+s.phase));c.fillStyle=`rgba(197,224,255,${a})`;c.beginPath();c.arc(sx,sy,s.r,0,Math.PI*2);c.fill();}
+  }
+  function orbitPath(c,R,cen,tilt,color,strong=false){c.beginPath();for(let i=0;i<=160;i++){
+    let p=projection((i/160)*Math.PI*2,R,cen,tilt);i===0?c.moveTo(p.x,p.y):c.lineTo(p.x,p.y);
+  }c.strokeStyle=color;c.lineWidth=strong?1.2:.85;c.stroke();}
+  function drawUniverse(time){if(!w||!h)return;
+    ctx.save();drawBackground(ctx,w,h,time);const rad=maxRadius(),cen=stageCenter();
+    // A leve inclinação aproxima o efeito de uma câmera sobre o plano orbital.
+    view.pitch+=(view.targetPitch-view.pitch)*.05;
+    let tilt=view.pitch;
+    const halo=ctx.createRadialGradient(cen.x,cen.y,0,cen.x,cen.y,rad*.72);
+    halo.addColorStop(0,'rgba(242,142,49,.085)');halo.addColorStop(.35,'rgba(32,83,143,.03)');halo.addColorStop(1,'rgba(32,83,143,0)');ctx.fillStyle=halo;ctx.beginPath();ctx.arc(cen.x,cen.y,rad*.72,0,Math.PI*2);ctx.fill();
+    const projected=PLANETS.map((p,i)=>({body:p,index:i,R:rad*radialFraction(i),a:p.phase+sim*.188*Math.pow(365.2/p.days,.30)}));
+    // Órbitas desenhadas sobre um plano inclinado; oclusão depende da profundidade projetada.
+    projected.forEach(p=>orbitPath(ctx,p.R,cen,tilt,p.index===2?'rgba(103,196,239,.24)':'rgba(122,158,196,.20)',p.index===2));
+    // Cinturão de asteroides: ilustrativo, entre Marte e Júpiter.
+    const beltR=(projected[3].R+projected[4].R)*.51;
+    for(const a of asteroids){const pt=projection(a.a+sim*.006,beltR*(.94+(a.r-.445)*1.2),cen,tilt);ctx.fillStyle=`rgba(193,174,135,${a.alpha})`;ctx.fillRect(pt.x,pt.y,a.size,a.size);}
+    let items=projected.map(p=>{
+      const pos=projection(p.a,p.R,cen,tilt),scale=clamp(rad/300,.72,1.15);
+      const drawR=mode==='simple'?p.body.baseR*scale:(2.6+9.8*Math.sqrt(p.body.diam/142984))*scale;
+      return{...p,pos,r:drawR*pos.depthScale};
+    });
+    let sunR=mode==='simple'?clamp(rad*.075,12,26):clamp(rad*.064,10,21);
+    let earth=items[2];let moonOrbit=Math.max(12,earth.r*2.5),moonAngle=sim*1.9+1.7;
+    const moonPos={x:earth.pos.x+Math.cos(moonAngle)*moonOrbit,y:earth.pos.y+Math.sin(moonAngle)*moonOrbit*.43,z:earth.pos.z+Math.sin(moonAngle)*moonOrbit*.15};
+    // A órbita da Lua fica destacada para que continue perceptível na tela.
+    ctx.save();ctx.strokeStyle='rgba(175,214,240,.24)';ctx.lineWidth=.7;ellipse(ctx,earth.pos.x,earth.pos.y,moonOrbit,moonOrbit*.43);ctx.stroke();ctx.restore();
+    items.push({body:MOON,pos:moonPos,r:clamp(earth.r*.35,2.8,4.2),index:8});
+    items.push({body:SUN,pos:{x:cen.x,y:cen.y,z:0},r:sunR,index:-1});
+    items.sort((a,b)=>a.pos.z-b.pos.z);
+    worldHits=[];
+    for(const ob of items){let {body,pos,r}=ob;
+      drawSphere(ctx,body,pos.x,pos.y,r,time);
+      if(hover===body.id){ctx.save();ctx.beginPath();ctx.arc(pos.x,pos.y,r+7,0,Math.PI*2);ctx.strokeStyle='rgba(133,228,249,.9)';ctx.lineWidth=1.3;ctx.shadowColor='#5bccea';ctx.shadowBlur=11;ctx.stroke();ctx.restore();}
+      worldHits.push({body,x:pos.x,y:pos.y,r:Math.max(r,body.id==='lua'?11:body.id==='sol'?19:13)});
+      if(body.id!=='lua'){
+        ctx.fillStyle=hover===body.id?'#f3fcff':'rgba(177,204,225,.83)';
+        let fs=clamp(w/80,9.5,11.5);
+        ctx.font=`600 ${fs}px Inter,system-ui,sans-serif`;
+        ctx.textAlign='center';ctx.textBaseline='top';
+        ctx.fillText(body.name,pos.x,pos.y+r+8);
+      }
+    }
+    if(hover==='lua'){
+      ctx.save();ctx.font='600 11px system-ui';ctx.textAlign='center';ctx.fillStyle='#fff';ctx.fillText('Lua',moonPos.x,moonPos.y-17);ctx.restore();
+    }
+    ctx.restore();
+  }
+  function factsFor(body){
+    if(body.id==='sol')return [
+      ['Diâmetro','1.392.700 km'],['Rotação',body.rotation],['Dist. do centro galáctico','≈ 26 mil anos-luz'],['Órbita galáctica','≈ 163 mil anos-luz'],['Volta à galáxia','≈ 230 milhões de anos'],['Temp. da superfície',body.temp],['Gravidade',body.gravity],['Classificação','Estrela G2V']
+    ];
+    const moon=body.id==='lua';let orbitKm=moon?384400*2*Math.PI:body.dist*1000000*2*Math.PI;
+    const formatLarge=(km)=>{
+      const nf=(n)=>new Intl.NumberFormat('pt-BR',{maximumFractionDigits:1}).format(n);
+      return km>=1e9?nf(km/1e9)+' bilhões km':nf(km/1e6)+' milhões km';
+    };
+    const period=body.days>=365.2*2?(new Intl.NumberFormat('pt-BR',{maximumFractionDigits:1}).format(body.days/365.25)+' anos'):new Intl.NumberFormat('pt-BR',{maximumFractionDigits:1}).format(body.days)+' dias';
+    return [
+      [moon?'Distância da Terra':'Distância do Sol',moon?'384.400 km':formatLarge(body.dist*1e6)],
+      ['Comprimento da órbita',formatLarge(orbitKm)],
+      ['Translação / órbita',period],['Rotação',body.rotation],
+      ['Diâmetro',new Intl.NumberFormat('pt-BR').format(body.diam)+' km'],
+      ['Temperatura média',body.temp],['Gravidade',body.gravity],
+      ['Satélites naturais',body.moons]
+    ];
+  }
+  function showBody(body){selected=body;hover=null;
+    $('focusType').textContent=body.kind;
+    $('focusName').textContent=body.name;
+    $('focusSummary').textContent=body.intro;
+    $('focusKicker').textContent=body.id==='terra'?'Terra e Lua · órbita ilustrativa':'Representação artística · movimento animado';
+    $('facts').replaceChildren(...factsFor(body).map(([label,value])=>{
+      let d=document.createElement('div');d.className='fact';
+      let t=document.createElement('span');t.className='fact-label';t.textContent=label;
+      let v=document.createElement('strong');v.className='fact-value';v.textContent=value;
+      d.append(t,v);return d;
+    }));
+    $('focus').classList.add('open');$('focus').setAttribute('aria-hidden','false');$('backBtn').focus({preventScroll:true});
+  }
+  function closeBody(){if(!selected)return;selected=null;$('focus').classList.remove('open');$('focus').setAttribute('aria-hidden','true');canvas.focus({preventScroll:true});}
+  function drawDetail(time){dc.clearRect(0,0,dw,dh);if(!selected||dw<=0||dh<=0)return;
+    const b=selected,x=dw*.50,y=dh*.515;
+    let rad=Math.min(dw*.37,dh*.355);
+    if(b.id==='saturno')rad*=.75;
+    detailCircle={x,y,r:rad};
+    const glow=dc.createRadialGradient(x,y,0,x,y,Math.min(dw,dh)*.64);
+    glow.addColorStop(0,b.id==='sol'?'rgba(228,110,25,.22)':'rgba(73,138,198,.15)');
+    glow.addColorStop(1,'rgba(33,78,134,0)');dc.fillStyle=glow;dc.fillRect(0,0,dw,dh);
+    // Delicados círculos técnicos ao redor do astro.
+    dc.save();dc.strokeStyle='rgba(125,172,215,.11)';dc.lineWidth=1;dc.setLineDash([3,9]);
+    dc.beginPath();dc.arc(x,y,Math.min(dw*.47,rad*1.48),0,Math.PI*2);dc.stroke();dc.setLineDash([]);
+    if(b.id==='terra'){
+      let a=sim*1.9+1.7,rm=rad*1.46,px=x+Math.cos(a)*rm,py=y+Math.sin(a)*rm*.49;
+      ellipse(dc,x,y,rm,rm*.49,0);dc.strokeStyle='rgba(162,207,237,.24)';dc.stroke();
+      if(Math.sin(a)<0)drawSphere(dc,MOON,px,py,Math.max(5,rad*.13),time);
+      drawSphere(dc,b,x,y,rad,time);
+      if(Math.sin(a)>=0)drawSphere(dc,MOON,px,py,Math.max(5,rad*.13),time);
+    } else {
+      drawSphere(dc,b,x,y,rad,time);
+    }
+    dc.restore();
+    // Traços finos de grade reforçam o estilo de observatório.
+    dc.save();dc.globalAlpha=.4;dc.strokeStyle='#91b7d2';dc.lineWidth=.7;
+    const wCross=Math.min(dw*.14,45);dc.beginPath();dc.moveTo(x-rad-wCross,y);dc.lineTo(x-rad-7,y);dc.moveTo(x+rad+7,y);dc.lineTo(x+rad+wCross,y);dc.stroke();dc.restore();
+  }
+  function pick(x,y){let candidates=worldHits.map(o=>({...o,d:Math.hypot(x-o.x,y-o.y)})).filter(o=>o.d<=o.r+4);
+    // Preferir a menor distância normalizada, permitindo selecionar planetas pequenos.
+    candidates.sort((a,b)=>(a.d/a.r)-(b.d/b.r));return candidates[0]?.body||null;
+  }
+  canvas.addEventListener('pointerdown',e=>{if(selected)return;canvas.setPointerCapture(e.pointerId);pointerStart={x:e.clientX,y:e.clientY};dragLast={x:e.clientX,y:e.clientY};canvas.classList.remove('dragging');});
+  canvas.addEventListener('pointermove',e=>{
+    if(pointerStart&&dragLast){let dx=e.clientX-dragLast.x,dy=e.clientY-dragLast.y;
+      if(Math.hypot(e.clientX-pointerStart.x,e.clientY-pointerStart.y)>5){canvas.classList.add('dragging');view.yaw+=dx*.007;view.targetPitch=clamp(view.targetPitch+dy*.004,.27,1.37);}
+      dragLast={x:e.clientX,y:e.clientY};return;
+    }
+    let box=canvas.getBoundingClientRect(),picked=pick(e.clientX-box.left,e.clientY-box.top);hover=picked?.id||null;canvas.style.cursor=hover?'pointer':'grab';
+  });
+  canvas.addEventListener('pointerup',e=>{if(!pointerStart)return;const d=Math.hypot(e.clientX-pointerStart.x,e.clientY-pointerStart.y);
+    if(d<8){let box=canvas.getBoundingClientRect(),b=pick(e.clientX-box.left,e.clientY-box.top);if(b)showBody(b);}
+    pointerStart=null;dragLast=null;canvas.classList.remove('dragging');
+  });
+  canvas.addEventListener('pointercancel',()=>{pointerStart=null;dragLast=null;canvas.classList.remove('dragging');});
+  canvas.addEventListener('pointerleave',()=>{if(!pointerStart)hover=null;});
+  detailCanvas.addEventListener('click',e=>{const rect=detailCanvas.getBoundingClientRect(),x=e.clientX-rect.left,y=e.clientY-rect.top;
+    // Toques fora da ilustração retornam imediatamente ao Sistema Solar.
+    if(Math.hypot(x-detailCircle.x,y-detailCircle.y)>detailCircle.r*1.08)closeBody();
+  });
+  $('focusPanel').addEventListener('click',e=>{if(e.target.closest('a,button'))return;closeBody();});
+  $('backBtn').addEventListener('click',closeBody);
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape')closeBody();
+    if(selected)return;
+    if(e.key==='ArrowRight'||e.key==='ArrowLeft'){
+      e.preventDefault();let ids=bodies.map(b=>b.id),ix=ids.indexOf(hover);
+      hover=ids[(ix+(e.key==='ArrowRight'?1:-1)+ids.length)%ids.length];
+    }
+    if(e.key==='Enter'&&document.activeElement===canvas){let b=bodies.find(o=>o.id===hover)||SUN;showBody(b);}
+  });
+  function setMode(next){mode=next;view.targetPitch=mode==='scaled'?.57:.73;
+    modeButtons.forEach((b,i)=>{let active=(i===0&&mode==='simple')||(i===1&&mode==='scaled');b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});
+    $('scaleNote').innerHTML=mode==='simple'?'<strong>Vista didática:</strong> órbitas e tamanhos ampliados para exploração.':'<strong>Vista escalonada:</strong> distâncias comprimidas (√) e tamanhos ampliados para visibilidade.';
+    $('hudTitle').textContent=mode==='simple'?'Uma viagem pelo cosmos':'Perspectiva e proporções';
+    $('hudCopy').textContent=mode==='simple'?'Selecione um astro para conhecer suas dimensões e seus movimentos.':'As separações refletem distâncias reais, comprimidas para caber na tela.';
+  }
+  $('modeSimple').addEventListener('click',()=>setMode('simple'));
+  $('modeScaled').addEventListener('click',()=>setMode('scaled'));
+  $('speedBtn').addEventListener('click',()=>{speedIndex=(speedIndex+1)%speeds.length;$('speedText').textContent=speeds[speedIndex]+'×';});
+  function updatePause(){ $('pauseBtn').innerHTML=paused?'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.7c0-.7.76-1.15 1.38-.8l11.1 6.85a1.45 1.45 0 0 1 0 2.5l-11.1 6.85A.9.9 0 0 1 7 19.3V4.7z"/></svg>':'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4" width="4" height="16" rx="1.2"/><rect x="14" y="4" width="4" height="16" rx="1.2"/></svg>';
+    $('pauseBtn').setAttribute('aria-label',paused?'Continuar animação':'Pausar animação');$('pauseBtn').title=paused?'Continuar':'Pausar'; }
+  $('pauseBtn').addEventListener('click',()=>{paused=!paused;updatePause();});updatePause();
+  const observer=new ResizeObserver(resize);observer.observe($('main'));observer.observe($('visualArea'));window.addEventListener('resize',resize);resize();
+  function animate(now){const dt=frameTime?Math.min((now-frameTime)/1000,.06):0;frameTime=now;
+    if(!paused)sim+=dt*speeds[speedIndex];drawUniverse(now*.001);if(selected)drawDetail(now*.001);requestAnimationFrame(animate);
+  }
+  requestAnimationFrame(animate);
+})();
+</script>
 </body>
 </html>
